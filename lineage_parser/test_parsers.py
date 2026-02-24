@@ -38,3 +38,14 @@ print(f"Edges  : {len(result3.edges)}")
 for e in result3.edges:
     print(f"  {e.source} ──► {e.target}  [{e.confidence}]  file={e.source_file}")
 print(f"Errors : {result3.parse_errors}")
+
+print()
+print("=" * 60)
+print("Testing airflow_dag.py")
+print("=" * 60)
+result4 = parse_python_file("corpus/airflow_dag.py")
+print(f"Nodes  : {[n.node_id for n in result4.nodes]}")
+print(f"Edges  : {len(result4.edges)}")
+for e in result4.edges:
+    print(f"  {e.source} ──► {e.target}  [{e.confidence}] line {e.line_number}")
+print(f"Errors : {result4.parse_errors}")
