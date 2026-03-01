@@ -218,3 +218,4 @@ storage/attestations.json
 warehouse.db
 *.egg-info/
 .DS_Store
+.vscode

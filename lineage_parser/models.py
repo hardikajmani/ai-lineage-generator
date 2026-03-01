@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from enum import Enum
+from typing import List
 
 
 class EdgeStatus(str, Enum):
@@ -43,3 +44,9 @@ class ParseResult(BaseModel):
     edges:      list[LineageEdge]
     nodes:      list[LineageNode]
     parse_errors: list[str] = []
+
+
+class LineageGraph(BaseModel):
+    """The final structured output expected from the LLM."""
+    nodes: List[LineageNode]
+    edges: List[LineageEdge]

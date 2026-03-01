@@ -22,3 +22,5 @@ requests==2.31.0
 
 # Data
 pandas==2.2.2
+
+google-genai
