@@ -40,16 +40,15 @@ export const getLayoutedElements = (lineageData, direction = 'LR') => {
       type: 'smoothstep', 
       animated: edge.status === 'AI_SUGGESTED',
       style: { stroke: '#64748b', strokeWidth: 2 },
-      
-      // THIS ADDS THE ARROWHEAD
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        width: 20,
-        height: 20,
-        color: '#64748b', // Matches the line color
-      },
-      
-      data: { explanation: edge.explanation }
+      markerEnd: { type: MarkerType.ArrowClosed, width: 20, height: 20, color: '#64748b' },
+      // Update this data object!
+      data: { 
+        explanation: edge.explanation,
+        transformation: edge.transformation,
+        confidence: edge.confidence_score,
+        source_file: edge.source_file, // <-- ADDED THIS
+        originalAnimated: edge.status === 'AI_SUGGESTED' // <-- ADDED THIS
+      }
     };
   });
 

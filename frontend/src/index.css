@@ -76,3 +76,21 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Fix React Flow Zoom Controls */
+.react-flow__controls-button {
+  background-color: white !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.react-flow__controls-button svg,
+.react-flow__controls-button path {
+  fill: #64748b !important; /* Forces the icons to be slate gray */
+}
+
+.react-flow__controls-button:hover {
+  background-color: #f1f5f9 !important;
+}
