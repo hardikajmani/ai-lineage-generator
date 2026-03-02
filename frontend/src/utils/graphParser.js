@@ -1,4 +1,5 @@
 import dagre from 'dagre';
+import { MarkerType } from '@xyflow/react'; // Add this import!
 
 export const getLayoutedElements = (lineageData, direction = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph();
@@ -23,13 +24,13 @@ export const getLayoutedElements = (lineageData, direction = 'LR') => {
         label: node.node_id,
         node_type: node.node_type,
         description: node.description,
+        is_high_risk: node.is_high_risk
       },
       position: { x: 0, y: 0 },
     };
   });
 
   const initialEdges = lineageData.edges.map((edge) => {
-    // THIS IS THE MAGIC LINE WE MISSED! Tell Dagre the edge exists:
     dagreGraph.setEdge(edge.source, edge.target);
 
     return {
@@ -39,6 +40,15 @@ export const getLayoutedElements = (lineageData, direction = 'LR') => {
       type: 'smoothstep', 
       animated: edge.status === 'AI_SUGGESTED',
       style: { stroke: '#64748b', strokeWidth: 2 },
+      
+      // THIS ADDS THE ARROWHEAD
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 20,
+        height: 20,
+        color: '#64748b', // Matches the line color
+      },
+      
       data: { explanation: edge.explanation }
     };
   });
