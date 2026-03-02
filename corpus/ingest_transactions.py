@@ -1,33 +1,30 @@
 import pandas as pd
-import sqlalchemy
+import os
 
-def load_raw_transactions(filepath: str) -> pd.DataFrame:
-    """Load raw transaction CSV from upstream data drop."""
-    df = pd.read_csv(filepath)
+def load_data(filepath: str) -> pd.DataFrame:
+    """Load raw transactions."""
+    return pd.read_csv(filepath)
+
+def clean_pii(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Mask sensitive PII data. 
+    HIGH RISK: Handling Social Insurance Numbers.
+    """
+    if "client_sin" in df.columns:
+        df["client_sin"] = "***-***-***"
     return df
 
-def clean_transactions(df: pd.DataFrame) -> pd.DataFrame:
+def write_to_staging(df: pd.DataFrame, engine):
     """
-    Clean and normalize raw transactions.
-    - Drop rows with null client_id or amount
-    - Filter out cancelled transactions
-    - Normalize currency to CAD
+    AMBIGUITY 1: Target table is hidden behind an environment variable.
     """
-    df = df.dropna(subset=["client_id", "amount"])
-    df = df[df["status"] != "cancelled"]
-    df["amount_cad"] = df["amount"] * df["fx_rate"]
-    df["settlement_date"] = pd.to_datetime(df["settlement_date"])
-    df = df.rename(columns={"tx_id": "transaction_id"})
-    return df
-
-def write_transactions(df: pd.DataFrame, engine: sqlalchemy.engine.Engine):
-    """Write cleaned transactions to the transactions table."""
-    df.to_sql("transactions", con=engine, if_exists="replace", index=False)
+    target_table = os.getenv("STAGING_TABLE", "raw_tx_stg")
+    df.to_sql(target_table, con=engine, if_exists="replace", index=False)
 
 if __name__ == "__main__":
     from sqlalchemy import create_engine
     engine = create_engine("sqlite:///warehouse.db")
-    raw = load_raw_transactions("data/raw_transactions.csv")
-    clean = clean_transactions(raw)
-    write_transactions(clean, engine)
-    print(f"Ingested {len(clean)} transactions into warehouse.db")
+    
+    df_raw = load_data("data/raw_transactions.csv")
+    df_clean = clean_pii(df_raw)
+    write_to_staging(df_clean, engine)

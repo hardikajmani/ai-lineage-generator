@@ -138,7 +138,36 @@ export default function App() {
 
       <main style={{ flexGrow: 1, position: 'relative', backgroundColor: '#f8fafc', display: 'flex' }}>
         
-        <div style={{ flexGrow: 1, position: 'relative' }}>
+        {/* --- EMPTY STATE OVERLAY --- */}
+        {nodes.length === 0 && (
+          <div style={{ 
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
+            display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', 
+            backgroundColor: '#f8fafc', zIndex: 50, padding: '20px', textAlign: 'center' 
+          }}>
+            <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', border: '1px solid #cbd5e1', maxWidth: '500px' }}>
+              <h2 style={{ margin: '0 0 10px 0', color: '#1e293b', fontSize: '24px' }}>
+                {error ? 'No Data Found' : 'Ready to Map Your Pipeline'}
+              </h2>
+              <p style={{ margin: '0 0 20px 0', color: '#64748b', lineHeight: '1.5' }}>
+                {error 
+                  ? "No lineage data exists in the cache. Please click 'Run Lineage Generation' to have the AI analyze your codebase."
+                  : "Welcome to the AI Lineage Generator. Click '1. Run Lineage Generation' to parse your codebase, or '2. Load Lineage Graph' if you already have cached data."
+                }
+              </p>
+              
+              {/* If there's an error from the backend, display the exact message */}
+              {error && (
+                <div style={{ backgroundColor: '#fef2f2', color: '#ef4444', padding: '10px', borderRadius: '6px', fontSize: '14px', border: '1px solid #fecaca' }}>
+                  Backend says: {error}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Main Canvas (Only visible if there are nodes) */}
+        <div style={{ flexGrow: 1, position: 'relative', visibility: nodes.length > 0 ? 'visible' : 'hidden' }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -149,10 +178,7 @@ export default function App() {
             nodeTypes={nodeTypes}
             fitView
             fitViewOptions={{ padding: 0.2 }}
-            onMove={(event, viewport) => {
-              console.log('Viewport zoom changed:', viewport.zoom);
-              setZoomLevel(viewport.zoom);
-            }}
+            onMove={(event, viewport) => setZoomLevel(viewport.zoom)}
           >
             <Background color="#ccc" gap={16} />
             <Controls />

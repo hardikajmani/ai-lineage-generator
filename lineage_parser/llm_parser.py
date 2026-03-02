@@ -33,6 +33,13 @@ def enrich_lineage_with_ai(raw_code: str, parse_result: ParseResult) -> LineageG
     - Add meaningful, plain-English 'explanation's to the edges (e.g., "Filters out invalid transactions").
     - If the static analyzer missed an obvious transformation, add it.
     - Output the final result STRICTLY matching the requested JSON schema.
+
+    CRITICAL INSTRUCTIONS:
+    1. RESTRICTED NODE TYPES: You MUST strictly use ONLY the following exact strings for `node_type`: 'source', 'file', 'table', 'dataframe', 'intermediate', or 'sink'. Do NOT invent new types like 'DB_TABLE' or 'FILE_SYSTEM'. 
+    2. SINK IDENTIFICATION: Any database table that acts as the final destination of a pipeline report MUST be labeled as 'sink'.
+    3. CONFIDENCE PENALTY: Confidence should reflect actual probabilty of the lineage. For eg If a lineage connection relies on an environment variable (e.g., os.getenv), dynamic string interpolation (f-strings), or regex/wildcards, you MUST lower the `confidence_score` to between 0.50 and 0.75. Reserve 0.90+ ONLY for explicit, hardcoded connections.
+    4. EXACT NAMING ONLY: You MUST extract the exact variable names (e.g., 'df_stg_tx', 'df_merged') and exact table names (e.g., 'raw_tx_stg', 'fees', 'accounts') to use as the `node_id`. You are STRICTLY FORBIDDEN from inventing generic sequential names like 'compute_fees_node_1' or 'node_2'.
+    5. GLOBAL SINKS ONLY: Do NOT label intermediate database tables (like 'raw_tx_stg' or 'fees') as 'sink'. They must be labeled as 'table'. The 'sink' label is reserved ONLY for the final, ultimate business reporting destination of the entire pipeline (e.g., 'client_summary').
     """
 
     prompt = f"""

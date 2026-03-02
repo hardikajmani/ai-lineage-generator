@@ -9,11 +9,9 @@ from lineage_parser.process import get_or_generate_raw_lineage, resolve_entities
 app = FastAPI(title="AI Lineage Generator API")
 
 # --- CORS Middleware ---
-# This is required so your Vite/React frontend (running on localhost:5173) 
-# can securely make requests to this API (running on localhost:8000).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, change this to your exact frontend URL
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -22,7 +20,8 @@ app.add_middleware(
 # Configuration Paths
 CORPUS_DIR = "./corpus"
 RAW_CACHE_FILE = "raw_lineage_cache.json"
-STITCHED_FILE = "stitched_lineage.json"
+# FIXED: Route the stitched file into the corpus directory
+STITCHED_FILE = Path(CORPUS_DIR) / "stitched_lineage.json"
 
 @app.post("/api/generate")
 def generate_lineage():
@@ -38,7 +37,7 @@ def generate_lineage():
         # 2. Stitch the entities together
         stitched_lineage = resolve_entities(raw_lineage)
         
-        # 3. Save the final JSON for the frontend
+        # 3. Save the final JSON for the frontend into the corpus folder
         with open(STITCHED_FILE, "w") as f:
             f.write(stitched_lineage.model_dump_json(indent=2))
             
@@ -56,16 +55,15 @@ def get_lineage():
     """
     Serves the pre-computed, stitched lineage graph to the frontend UI.
     """
-    path = Path(STITCHED_FILE)
-    
-    if not path.exists():
+    # FIXED: Check the path inside the corpus folder
+    if not STITCHED_FILE.exists():
         raise HTTPException(
             status_code=404, 
-            detail="Lineage graph not found. Please call /api/generate first."
+            detail="Lineage graph not found. Please click 'Run Lineage Generation' first."
         )
         
     try:
-        with open(path, "r") as f:
+        with open(STITCHED_FILE, "r") as f:
             data = json.load(f)
         return data
     except Exception as e:
