@@ -50,7 +50,7 @@ def get_or_generate_raw_lineage(corpus_dir: str, cache_file: str = "raw_lineage_
     Checks if a cached version of the AI output exists. 
     If yes, loads it. If no, runs the AI pipeline and saves the result.
     """
-    cache_path = Path(cache_file)
+    cache_path = Path(corpus_dir) / cache_file
     
     if cache_path.exists():
         print(f"⚡ Found cached AI data at '{cache_file}'. Skipping API calls...")
