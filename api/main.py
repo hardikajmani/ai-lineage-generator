@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import your core logic from the lineage_parser module
 from lineage_parser.process import get_or_generate_raw_lineage, resolve_entities
 
-app = FastAPI(title="AI Lineage Generator API")
+app = FastAPI(title="LineageGuard.ai Generator API")
 
 # --- CORS Middleware ---
 app.add_middleware(

@@ -17,13 +17,10 @@ export default function App() {
   const [selectedEdge, setSelectedEdge] = useState(null); 
   const [zoomLevel, setZoomLevel] = useState(1);
 
-  // NEW STATES FOR HUMAN VERIFICATION
   const [verifiedEdges, setVerifiedEdges] = useState(new Set());
   const [showHighRisk, setShowHighRisk] = useState(false);
 
-  // --- Dynamic Styling Effect ---
-  // This watches the toggles and dynamically colors the nodes/edges
-  // without losing their dragged positions on the canvas.
+  // --- Dynamic Styling Effect with 85% Confidence Logic ---
   useEffect(() => {
     setNodes((nds) => nds.map((node) => ({
       ...node,
@@ -35,23 +32,27 @@ export default function App() {
     })));
 
     setEdges((eds) => eds.map((edge) => {
+      const confidence = edge.data.confidence || 0;
+      const isHighConfidence = confidence >= 0.85;
       const isVerified = verifiedEdges.has(edge.id);
-      // Flag anything below 80% confidence as needing human review
-      const isLowConfidence = (edge.data.confidence || 0) < 0.80; 
-      const needsReview = showHighRisk && isLowConfidence && !isVerified;
-      const isDimmed = showHighRisk && !needsReview && !isVerified;
+      
+      // Needs review if it's under 85% and hasn't been verified by a human yet
+      const needsReview = !isHighConfidence && !isVerified;
+      
+      // If we are auditing, dim the highly confident/safe edges
+      const isDimmed = showHighRisk && isHighConfidence;
 
-      let stroke = '#64748b';
+      let stroke = '#64748b'; // Default Slate for AI-Confident edges
       let strokeWidth = 2;
       let animated = edge.data.originalAnimated;
 
       if (isVerified) {
-        stroke = '#10b981'; // Verified = Solid Green
+        stroke = '#10b981'; // Human Verified = Solid Green
         strokeWidth = 3;
         animated = false;   // Stops the AI dotted animation
       } else if (needsReview) {
         stroke = '#ef4444'; // Needs Review = Bright Red
-        strokeWidth = 3;
+        strokeWidth = 2;
       }
 
       return {
@@ -86,13 +87,13 @@ export default function App() {
     setIsLoading(true); setError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/lineage`);
-      if (!response.ok) throw new Error('No lineage found.');
+      if (!response.ok) throw new Error('No lineage data exists. Please run the AI generation first.');
       const data = await response.json();
       const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(data);
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
       setSelectedEdge(null); 
-      setVerifiedEdges(new Set()); // Reset verifications on fresh load
+      setVerifiedEdges(new Set()); 
       setShowHighRisk(false);
     } catch (err) { setError(err.message); } 
     finally { setIsLoading(false); }
@@ -102,7 +103,6 @@ export default function App() {
   const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
   const onEdgeClick = (event, edge) => {
-    // Pass the ENTIRE edge object so we have access to edge.id
     setSelectedEdge(edge);
   };
 
@@ -114,16 +114,17 @@ export default function App() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif', overflow: 'hidden' }}>
       
       <header style={{ padding: '1rem 2rem', backgroundColor: '#1e293b', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem' }}>AI Lineage Generator</h1>
+        <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold', letterSpacing: '-0.5px' }}>
+          LineageGuard<span style={{ color: '#10b981' }}>.ai</span>
+        </h1>
         <div style={{ display: 'flex', gap: '1rem' }}>
           
-          {/* THE NEW HIGH RISK TOGGLE BUTTON */}
           {nodes.length > 0 && (
             <button 
               onClick={() => setShowHighRisk(!showHighRisk)} 
               style={{ padding: '0.5rem 1rem', cursor: 'pointer', backgroundColor: showHighRisk ? '#ef4444' : '#475569', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 'bold' }}
             >
-              {showHighRisk ? 'Show Full Pipeline' : '🔍 Audit High-Risk Paths'}
+              {showHighRisk ? 'Show Full Pipeline' : '🔍 Isolate High-Risk Paths'}
             </button>
           )}
 
@@ -138,7 +139,6 @@ export default function App() {
 
       <main style={{ flexGrow: 1, position: 'relative', backgroundColor: '#f8fafc', display: 'flex' }}>
         
-        {/* --- EMPTY STATE OVERLAY --- */}
         {nodes.length === 0 && (
           <div style={{ 
             position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
@@ -149,14 +149,18 @@ export default function App() {
               <h2 style={{ margin: '0 0 10px 0', color: '#1e293b', fontSize: '24px' }}>
                 {error ? 'No Data Found' : 'Ready to Map Your Pipeline'}
               </h2>
-              <p style={{ margin: '0 0 20px 0', color: '#64748b', lineHeight: '1.5' }}>
+              <p style={{ margin: '0 0 20px 0', color: '#64748b', lineHeight: '1.5', alignContent: 'left' }}>
                 {error 
                   ? "No lineage data exists in the cache. Please click 'Run Lineage Generation' to have the AI analyze your codebase."
-                  : "Welcome to the AI Lineage Generator. Click '1. Run Lineage Generation' to parse your codebase, or '2. Load Lineage Graph' if you already have cached data."
+                  : (
+                    <>
+                      Welcome to LineageGuard.ai <br />
+                      Click '1. Run Lineage Generation' to parse your codebase, <br />
+                      or '2. Load Lineage Graph' if you already have cached data.
+                    </>
+                  )
                 }
               </p>
-              
-              {/* If there's an error from the backend, display the exact message */}
               {error && (
                 <div style={{ backgroundColor: '#fef2f2', color: '#ef4444', padding: '10px', borderRadius: '6px', fontSize: '14px', border: '1px solid #fecaca' }}>
                   Backend says: {error}
@@ -166,7 +170,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Main Canvas (Only visible if there are nodes) */}
         <div style={{ flexGrow: 1, position: 'relative', visibility: nodes.length > 0 ? 'visible' : 'hidden' }}>
           <ReactFlow
             nodes={nodes}
@@ -223,28 +226,39 @@ export default function App() {
               <button onClick={() => setSelectedEdge(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>✕</button>
             </div>
 
-            {/* HUMAN VERIFICATION TOGGLE */}
-            <div style={{ 
-              backgroundColor: verifiedEdges.has(selectedEdge.id) ? '#d1fae5' : '#f1f5f9', 
-              padding: '12px', borderRadius: '6px', 
-              border: `1px solid ${verifiedEdges.has(selectedEdge.id) ? '#34d399' : '#cbd5e1'}`, 
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
-            }}>
-               <div>
-                  <h4 style={{ margin: '0 0 2px 0', fontSize: '13px', color: verifiedEdges.has(selectedEdge.id) ? '#065f46' : '#475569' }}>Human Verification</h4>
-                  <span style={{ fontSize: '11px', color: '#64748b' }}>
-                    {verifiedEdges.has(selectedEdge.id) ? 'Verified and locked for production.' : 'Pending human review.'}
-                  </span>
-               </div>
-               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input
-                      type="checkbox"
-                      checked={verifiedEdges.has(selectedEdge.id)}
-                      onChange={() => handleVerifyEdge(selectedEdge.id)}
-                      style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#10b981' }}
-                  />
-               </label>
-            </div>
+            {/* CONDITIONAL HUMAN VERIFICATION UI */}
+            {(selectedEdge.data.confidence || 0) >= 0.85 ? (
+              <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#334155' }}>✅ Auto-Verified by AI</h4>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  Confidence is high ({((selectedEdge.data.confidence || 0) * 100).toFixed(0)}%). No human review required.
+                </span>
+              </div>
+            ) : (
+              <div style={{ 
+                backgroundColor: verifiedEdges.has(selectedEdge.id) ? '#d1fae5' : '#fef2f2', 
+                padding: '12px', borderRadius: '6px', 
+                border: `1px solid ${verifiedEdges.has(selectedEdge.id) ? '#34d399' : '#fca5a5'}`, 
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
+              }}>
+                 <div>
+                    <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', color: verifiedEdges.has(selectedEdge.id) ? '#065f46' : '#991b1b' }}>
+                      ⚠️ Verification Required
+                    </h4>
+                    <span style={{ fontSize: '12px', color: verifiedEdges.has(selectedEdge.id) ? '#059669' : '#ef4444' }}>
+                      {verifiedEdges.has(selectedEdge.id) ? 'Verified and locked for production.' : 'Low confidence. Please review.'}
+                    </span>
+                 </div>
+                 <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                        type="checkbox"
+                        checked={verifiedEdges.has(selectedEdge.id)}
+                        onChange={() => handleVerifyEdge(selectedEdge.id)}
+                        style={{ width: '22px', height: '22px', cursor: 'pointer', accentColor: '#10b981' }}
+                    />
+                 </label>
+              </div>
+            )}
 
             {/* SOURCE FILE PATH */}
             {selectedEdge.data.source_file && (
@@ -276,7 +290,7 @@ export default function App() {
                <h4 style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>AI Confidence</h4>
                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ flexGrow: 1, height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${(selectedEdge.data.confidence || 0) * 100}%`, backgroundColor: '#10b981' }}></div>
+                    <div style={{ height: '100%', width: `${(selectedEdge.data.confidence || 0) * 100}%`, backgroundColor: (selectedEdge.data.confidence || 0) >= 0.85 ? '#10b981' : '#ef4444' }}></div>
                   </div>
                   <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#1e293b' }}>
                     {((selectedEdge.data.confidence || 0) * 100).toFixed(0)}%

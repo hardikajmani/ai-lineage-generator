@@ -5,14 +5,14 @@ export const getLayoutedElements = (lineageData, direction = 'LR') => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-  const nodeWidth = 250;
+  const nodeWidth = 220;
   const nodeHeight = 80;
 
   // Force Left-to-Right and spacing
   dagreGraph.setGraph({ 
     rankdir: direction, 
-    ranksep: 200,       
-    nodesep: 50,        
+    ranksep: 100,       
+    nodesep: 100,        
   });
 
   const initialNodes = lineageData.nodes.map((node) => {
