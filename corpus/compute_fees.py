@@ -3,8 +3,7 @@ import os
 
 def load_staging_data(engine) -> pd.DataFrame:
     """
-    AMBIGUITY 2: F-string query and environment variable. 
-    AI must guess this connects to the ingest script.
+    Load raw transaction data from the staging table.
     """
     source_table = os.getenv("STAGING_TABLE", "raw_tx_stg")
     return pd.read_sql(f"SELECT * FROM {source_table}", con=engine)

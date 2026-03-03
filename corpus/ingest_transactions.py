@@ -7,8 +7,7 @@ def load_data(filepath: str) -> pd.DataFrame:
 
 def clean_pii(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Mask sensitive PII data. 
-    HIGH RISK: Handling Social Insurance Numbers.
+    Clean personally identifiable information (PII) from the transaction data.
     """
     if "client_sin" in df.columns:
         df["client_sin"] = "***-***-***"
@@ -16,7 +15,8 @@ def clean_pii(df: pd.DataFrame) -> pd.DataFrame:
 
 def write_to_staging(df: pd.DataFrame, engine):
     """
-    AMBIGUITY 1: Target table is hidden behind an environment variable.
+    write cleaned transaction data to the staging table in the warehouse. 
+    The target table name is read from an environment variable, defaulting to 'raw_tx_stg' if not set.
     """
     target_table = os.getenv("STAGING_TABLE", "raw_tx_stg")
     df.to_sql(target_table, con=engine, if_exists="replace", index=False)

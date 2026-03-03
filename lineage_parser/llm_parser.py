@@ -27,12 +27,19 @@ def enrich_lineage_with_ai(raw_code: str, parse_result: ParseResult) -> LineageG
     1. The raw source code of a file.
     2. A 'ParseResult' JSON containing deterministic facts extracted by a static analyzer.
     
+    
     Your tasks:
     - Review the static analyzer's edges and nodes.
     - Resolve any aliasing (e.g., if a dataframe 'df' is renamed to 'clean_df', track the flow).
     - Add meaningful, plain-English 'explanation's to the edges (e.g., "Filters out invalid transactions").
     - If the static analyzer missed an obvious transformation, add it.
     - Output the final result STRICTLY matching the requested JSON schema.
+
+    EXACT CODE EXTRACTION ONLY: For the `transformation` field in the edge definition, you MUST extract and output the EXACT, verbatim line(s) of code from the source file. 
+    - DO NOT summarize the action (e.g., NEVER write "clean_pii" or "load_data").
+    - DO NOT paraphrase. 
+    - If the source code says `df_clean = df_raw.drop(columns=['ssn', 'sin'])`, the `transformation` value must be exactly `"df_clean = df_raw.drop(columns=['ssn', 'sin'])"`. 
+    - You are acting as a literal code extractor for this field.
 
     CRITICAL INSTRUCTIONS:
     1. RESTRICTED NODE TYPES: You MUST strictly use ONLY the following exact strings for `node_type`: 'source', 'file', 'table', 'dataframe', 'intermediate', or 'sink'. Do NOT invent new types like 'DB_TABLE' or 'FILE_SYSTEM'. 

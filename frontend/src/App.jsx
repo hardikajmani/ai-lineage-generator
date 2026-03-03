@@ -21,13 +21,22 @@ export default function App() {
   const [showHighRisk, setShowHighRisk] = useState(false);
 
   // --- Dynamic Styling Effect with 85% Confidence Logic ---
+  // --- Dynamic Styling Effect with High-Risk Path Isolation ---
   useEffect(() => {
+    // 1. Find all sensitive nodes so we can highlight paths connected to them
+    const highRiskNodeIds = new Set(
+      nodes.filter(n => n.data?.is_high_risk).map(n => n.id)
+    );
+
     setNodes((nds) => nds.map((node) => ({
       ...node,
       style: { 
         ...node.style, 
+        // Dim safe nodes, keep high-risk nodes fully visible
         opacity: (showHighRisk && !node.data.is_high_risk) ? 0.2 : 1, 
-        transition: 'opacity 0.3s' 
+        // Add a red glow to high-risk nodes when isolated
+        filter: (showHighRisk && node.data.is_high_risk) ? 'drop-shadow(0px 0px 10px rgba(239, 68, 68, 0.6))' : 'none',
+        transition: 'all 0.3s ease' 
       }
     })));
 
@@ -39,29 +48,44 @@ export default function App() {
       // Needs review if it's under 85% and hasn't been verified by a human yet
       const needsReview = !isHighConfidence && !isVerified;
       
-      // If we are auditing, dim the highly confident/safe edges
-      const isDimmed = showHighRisk && isHighConfidence;
+      // Does this edge carry data in or out of a sensitive PII node?
+      const connectsToHighRisk = highRiskNodeIds.has(edge.source) || highRiskNodeIds.has(edge.target);
 
-      let stroke = '#64748b'; // Default Slate for AI-Confident edges
+      // If isolating, dim edges that are BOTH safe AND not touching sensitive data
+      const isDimmed = showHighRisk && !needsReview && !connectsToHighRisk;
+
+      let stroke = '#64748b'; // Default Slate for safe, confident paths
       let strokeWidth = 2;
       let animated = edge.data.originalAnimated;
 
       if (isVerified) {
         stroke = '#10b981'; // Human Verified = Solid Green
         strokeWidth = 3;
-        animated = false;   // Stops the AI dotted animation
+        animated = false;   
       } else if (needsReview) {
         stroke = '#ef4444'; // Needs Review = Bright Red
-        strokeWidth = 2;
+        // Make the red line thicker when isolating so it screams for attention
+        strokeWidth = showHighRisk ? 4 : 3; 
+      } else if (showHighRisk && connectsToHighRisk) {
+        // Highlight safe paths touching PII in orange to trace the data flow
+        stroke = '#f97316'; 
+        strokeWidth = 3;
       }
 
       return {
         ...edge,
         animated,
-        style: { ...edge.style, stroke, strokeWidth, opacity: isDimmed ? 0.1 : 1, transition: 'all 0.3s' },
+        style: { 
+          ...edge.style, 
+          stroke, 
+          strokeWidth, 
+          opacity: isDimmed ? 0.1 : 1, 
+          transition: 'all 0.3s ease' 
+        },
         markerEnd: { ...edge.markerEnd, color: stroke }
       };
     }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showHighRisk, verifiedEdges]);
 
   const handleVerifyEdge = (edgeId) => {
